@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 from ai_engine import analyze_dispute
+from paypal_service import execute_sandbox_resolution
 
 # Page setup & styling
 st.set_page_config(page_title="PayPal Dispute Copilot", page_icon="💳", layout="wide")
@@ -142,12 +143,22 @@ with tab2:
             st.caption(f"**Reasoning:** {agent_info.get('rationale', '')}")
 
             st.divider()
-            st.markdown("#### Human Reviewer Decision")
-            btn1, btn2 = st.columns(2)
-            if btn1.button(
-                "✅ Approve & Release Refund", type="primary", use_container_width=True
-            ):
-                st.balloons()
-                st.success("Case Closed: Refund authorized and credited back to buyer.")
-            if btn2.button("⚠️ Request Tier-2 Escalation", use_container_width=True):
-                st.warning("Case flagged for manual supervisor review.")
+st.markdown("#### Human Reviewer Decision")
+btn1, btn2 = st.columns(2)
+
+if btn1.button("✅ Approve & Release Refund", type="primary", use_container_width=True):
+    with st.spinner(
+        "Connecting to PayPal Developer Sandbox & authorizing transaction..."
+    ):
+        paypal_res = execute_sandbox_resolution(amount="180.00")
+
+        if paypal_res.get("success"):
+            st.balloons()
+            st.success("Case Closed: Refund Authorized on PayPal Developer Platform!")
+            st.info(f"**PayPal Sandbox Order ID:** `{paypal_res.get('order_id')}`")
+            st.caption(f"Status: **{paypal_res.get('status')}** via PayPal REST API v2")
+        else:
+            st.error(f"PayPal Sandbox Error: {paypal_res.get('error')}")
+
+if btn2.button("⚠️ Request Tier-2 Escalation", use_container_width=True):
+    st.warning("Case flagged for manual supervisor review.")
